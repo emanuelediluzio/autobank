@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Autobank — Collegamento completato</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'DM Sans', sans-serif;
+      background: #0f1419;
+      color: #e6edf3;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .box {
+      text-align: center;
+      max-width: 400px;
+    }
+    h1 { color: #3fb950; font-size: 1.5rem; margin-bottom: 0.5rem; }
+    p { color: #8b949e; margin: 1rem 0; }
+    a {
+      display: inline-block;
+      margin-top: 1rem;
+      padding: 0.75rem 1.5rem;
+      background: #3fb950;
+      color: #0f1419;
+      text-decoration: none;
+      font-weight: 600;
+      border-radius: 8px;
+    }
+    a:hover { background: #238636; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Banca collegata</h1>
+    <p>L'autenticazione è andata a buon fine. Puoi ora visualizzare le tue spese.</p>
+    <a href="/">Vai alla dashboard</a>
+  </div>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get('requisition') || params.get('ref') || params.get('requisition_id');
+    const fromStorage = localStorage.getItem('autobank_requisition');
+    const requisition = fromUrl || fromStorage;
+    if (requisition) {
+      if (fromStorage) localStorage.removeItem('autobank_requisition');
+      window.location.replace('/?requisition=' + requisition);
+    }
+  </script>
+</body>
+</html>

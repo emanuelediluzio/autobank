@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Autobank — Tracking Spese</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1 class="logo">autobank</h1>
+      <p class="tagline">Tracking spese con Open Banking</p>
+    </header>
+
+    <main class="main">
+      <section id="connect-section" class="card">
+        <h2>Collega la tua banca</h2>
+        <p class="muted">Scegli la banca e autorizza l'accesso in modo sicuro (PSD2). I dati restano tuoi.</p>
+        <div class="form-row">
+          <label for="country">Paese</label>
+          <select id="country">
+            <option value="IT">Italia</option>
+            <option value="GB">Regno Unito</option>
+            <option value="DE">Germania</option>
+            <option value="FR">Francia</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="bank">Banca</label>
+          <select id="bank">
+            <option value="SANDBOXFINANCE_SFIN0000">Sandbox Finance (test)</option>
+          </select>
+        </div>
+        <button id="btn-connect" class="btn btn-primary">Collega banca</button>
+      </section>
+
+      <section id="dashboard-section" class="card hidden">
+        <h2>Le tue spese</h2>
+        <div id="dashboard-content"></div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>Powered by GoCardless · Open Banking PSD2</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
