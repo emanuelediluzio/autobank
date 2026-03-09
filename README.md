@@ -1,61 +1,57 @@
 # Autobank
 
-App di **tracking spese** con Open Banking (PSD2) tramite GoCardless Bank Account Data.
-
+App di **tracking spese** con Open Banking (PSD2).  
 Collega la tua banca, visualizza le transazioni e le spese categorizzate automaticamente.
+
+> Esempi e configurazione pensati per provider come **Tink**. Adatta gli endpoint se usi un altro aggregatore.
 
 ## Requisiti
 
 - Node.js 18+
-- Account [GoCardless Bank Account Data](https://bankaccountdata.gocardless.com/) (gratuito per sviluppo)
+- Account sviluppatore presso un provider Open Banking (es. Tink)
 
 ## Setup
 
-1. **Registrati** su [bankaccountdata.gocardless.com](https://bankaccountdata.gocardless.com/user-secrets/)
-2. Crea un **User Secret** e copia `secret_id` e `secret_key`
-3. Copia `.env.example` in `.env`:
+1. Crea un account sviluppatore (es. su Tink) e genera `client_id` e `client_secret`.
+2. Copia `.env.example` in `.env`:
 
 ```bash
 cp .env.example .env
 ```
 
-4. Inserisci le credenziali in `.env`:
+3. Inserisci le credenziali in `.env`:
 
-```
-GOCARDLESS_SECRET_ID=il_tuo_secret_id
-GOCARDLESS_SECRET_KEY=la_tua_secret_key
+```env
+OB_CLIENT_ID=il_tuo_client_id
+OB_CLIENT_SECRET=il_tuo_client_secret
+OB_API_BASE=https://api.tink.com
 REDIRECT_URL=http://localhost:3000/callback.html
 ```
 
-5. Installa e avvia:
+4. Installa e avvia:
 
 ```bash
 npm install
 npm run dev
 ```
 
-6. Apri [http://localhost:3000](http://localhost:3000)
+5. Apri [http://localhost:3000](http://localhost:3000)
 
 ## Flusso
 
-1. **Collega banca** → Scegli paese e banca, clicca "Collega banca"
-2. **Autorizza** → Verrai reindirizzato alla banca (o Sandbox per i test) per dare il consenso
-3. **Dashboard** → Visualizza transazioni e spese per categoria
-
-## Sandbox
-
-Per testare senza banche reali, usa **Sandbox Finance** (`SANDBOXFINANCE_SFIN0000`).  
-Puoi inserire qualsiasi user id e codice per completare l'autenticazione.
+1. **Collega banca** → Scegli paese, clicca "Collega banca" e vieni reindirizzato al flusso del provider (es. Tink Link).
+2. **Autorizza** → L'utente dà il consenso nella UI della banca/provider.
+3. **Dashboard** → Una volta completato il collegamento, la dashboard mostra transazioni e spese per categoria.
 
 ## API
 
 | Endpoint | Descrizione |
 |----------|-------------|
-| `GET /api/institutions?country=IT` | Lista banche |
-| `POST /api/requisitions` | Crea link collegamento |
-| `GET /api/requisitions/:id` | Dettaglio requisition |
+| `GET /api/institutions?country=IT` | Lista mercati/istituti disponibili |
+| `POST /api/requisitions` | Crea il link di collegamento (es. Tink Link) |
+| `GET /api/requisitions/:id` | (Placeholder per compatibilità, da adattare al provider) |
 | `GET /api/accounts/:id/transactions` | Transazioni (categorizzate) |
-| `GET /api/dashboard/:requisitionId` | Dashboard aggregata |
+| `GET /api/dashboard/:requisitionId` | Dashboard aggregata (richiede logica token utente) |
 
 ## Categorizzazione
 

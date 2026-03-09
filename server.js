@@ -1,6 +1,6 @@
 /**
  * Autobank - Server Express
- * API per collegamento banche (GoCardless) e tracking spese
+ * API per collegamento banche (Open Banking) e tracking spese
  */
 
 import 'dotenv/config';
@@ -15,7 +15,7 @@ import {
   getAccountDetails,
   getAccountBalances,
   getAccountTransactions,
-} from './src/gocardless.js';
+} from './src/openbanking-tink.js';
 import { categorizeTransactions, groupByCategory } from './src/categorizer.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -23,8 +23,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const auth = () => ({
-  secretId: process.env.GOCARDLESS_SECRET_ID,
-  secretKey: process.env.GOCARDLESS_SECRET_KEY,
+  clientId: process.env.OB_CLIENT_ID,
+  clientSecret: process.env.OB_CLIENT_SECRET,
+  apiBase: process.env.OB_API_BASE,
 });
 
 app.use(cors());
@@ -48,13 +49,13 @@ app.get('/api/institutions', async (req, res) => {
 app.post('/api/requisitions', async (req, res) => {
   try {
     const redirect = process.env.REDIRECT_URL || `${req.protocol}://${req.get('host')}/callback.html`;
-    const { institutionId, reference } = req.body;
-    const institution_id = institutionId || 'SANDBOXFINANCE_SFIN0000'; // sandbox default
+    const { institutionId, reference, country } = req.body;
     const reqData = await createRequisition(
       {
         redirect,
-        institutionId: institution_id,
+        institutionId,
         reference: reference || `user-${Date.now()}`,
+        country: country || req.query.country || 'IT',
       },
       auth()
     );
@@ -146,7 +147,7 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`\n🚀 Autobank in ascolto su http://localhost:${PORT}`);
   console.log(`   API: /api/institutions, /api/requisitions, /api/accounts/:id/transactions`);
-  if (!process.env.GOCARDLESS_SECRET_ID) {
-    console.log(`\n⚠️  Configura .env con GOCARDLESS_SECRET_ID e GOCARDLESS_SECRET_KEY`);
+  if (!process.env.OB_CLIENT_ID) {
+    console.log(`\n⚠️  Configura .env con OB_CLIENT_ID e OB_CLIENT_SECRET`);
   }
 });
