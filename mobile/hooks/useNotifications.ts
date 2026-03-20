@@ -34,8 +34,8 @@ export function useNotifications() {
     });
 
     return () => {
-      if (notificationListener.current) Notifications.removeNotificationSubscription(notificationListener.current);
-      if (responseListener.current) Notifications.removeNotificationSubscription(responseListener.current);
+      if (notificationListener.current) notificationListener.current.remove();
+      if (responseListener.current) responseListener.current.remove();
     };
   }, [userId]);
 }

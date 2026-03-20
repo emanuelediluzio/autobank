@@ -1,7 +1,7 @@
 // mobile/app/(tabs)/index.tsx
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, RefreshControl, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Redirect } from 'expo-router';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useTransactionStore } from '../../store/useTransactionStore';
 import { SummaryCard } from '../../components/SummaryCard';
@@ -13,12 +13,12 @@ import { theme } from '../../theme';
 export default function DashboardScreen() {
   const { isOnboarded } = useAuthStore();
   const { accounts, transactions, balances, stats, loading, fetchAll } = useTransactionStore();
-  const router = useRouter();
 
   useEffect(() => {
-    if (!isOnboarded) { router.replace('/onboarding'); return; }
-    fetchAll();
+    if (isOnboarded) fetchAll();
   }, [isOnboarded]);
+
+  if (!isOnboarded) return <Redirect href="/onboarding" />;
 
   // Aggregate across all accounts
   const allTxs = Object.values(transactions).flat();
