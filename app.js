@@ -1,0 +1,136 @@
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import {
+  getInstitutions,
+  createRequisition,
+  getRequisition,
+  getAccountDetails,
+  getAccountBalances,
+  getAccountTransactions,
+} from './src/openbanking-tink.js';
+import { categorizeTransactions, groupByCategory } from './src/categorizer.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const app = express();
+
+const auth = () => ({
+  clientId: process.env.OB_CLIENT_ID,
+  clientSecret: process.env.OB_CLIENT_SECRET,
+  apiBase: process.env.OB_API_BASE,
+});
+
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Lista banche / mercati
+app.get('/api/institutions', async (req, res) => {
+  try {
+    const country = req.query.country || 'IT';
+    const list = await getInstitutions(country, auth());
+    res.json(list);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Crea link di collegamento (es. Tink Link)
+app.post('/api/requisitions', async (req, res) => {
+  try {
+    const redirect = process.env.REDIRECT_URL || `${req.protocol}://${req.get('host')}/callback.html`;
+    const { institutionId, reference, country } = req.body;
+    const reqData = await createRequisition(
+      {
+        redirect,
+        institutionId,
+        reference: reference || `user-${Date.now()}`,
+        country: country || req.query.country || 'IT',
+      },
+      auth()
+    );
+    res.json(reqData);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Endpoint placeholder come nel server originale
+app.get('/api/requisitions/:id', async (req, res) => {
+  try {
+    const data = await getRequisition(req.params.id, auth());
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/accounts/:id/details', async (req, res) => {
+  try {
+    const data = await getAccountDetails(req.params.id, auth());
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/accounts/:id/balances', async (req, res) => {
+  try {
+    const data = await getAccountBalances(req.params.id, auth());
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/accounts/:id/transactions', async (req, res) => {
+  try {
+    const raw = await getAccountTransactions(req.params.id, auth());
+    const categorized = categorizeTransactions(raw.transactions || {});
+    res.json({
+      ...raw,
+      transactions: categorized,
+      byCategory: groupByCategory({ booked: categorized.booked }),
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/dashboard/:requisitionId', async (req, res) => {
+  try {
+    const reqData = await getRequisition(req.params.requisitionId, auth());
+    const accounts = reqData.accounts || [];
+    const results = [];
+
+    for (const accountId of accounts) {
+      const [details, balances, txRaw] = await Promise.all([
+        getAccountDetails(accountId, auth()),
+        getAccountBalances(accountId, auth()),
+        getAccountTransactions(accountId, auth()),
+      ]);
+      const categorized = categorizeTransactions(txRaw.transactions || {});
+      results.push({
+        accountId,
+        details,
+        balances,
+        transactions: categorized,
+        byCategory: groupByCategory({ booked: categorized.booked }),
+      });
+    }
+
+    res.json({ requisition: reqData, accounts: results });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Fallback SPA
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+export default app;
+
