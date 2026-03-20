@@ -15,22 +15,83 @@ import {
   getAccountDetails,
   getAccountBalances,
   getAccountTransactions,
-} from './src/openbanking-tink.js';
+} from './src/openbanking-yapily.js';
 import { categorizeTransactions, groupByCategory } from './src/categorizer.js';
+import { getAccounts } from './src/openbanking-yapily.js';
+import {
+  savePushToken, getPushToken, getUserSettings, saveUserSettings,
+  getUserConsents, addUserConsent, removeUserConsent,
+} from './src/storage.js';
+import { computeMonthlyStats, computeCategoryTotals } from './src/stats.js';
+import { startPolling } from './src/polling.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 const auth = () => ({
-  clientId: process.env.OB_CLIENT_ID,
-  clientSecret: process.env.OB_CLIENT_SECRET,
-  apiBase: process.env.OB_API_BASE,
+  appUuid: process.env.YAPILY_APPLICATION_UUID,
+  appSecret: process.env.YAPILY_APPLICATION_SECRET,
+  apiBase: process.env.YAPILY_API_BASE,
+  // Per ora usiamo un consentToken statico da .env per sviluppo.
+  // In produzione andrà gestito per utente dopo il flusso OAuth2 Yapily.
+  consentToken: process.env.YAPILY_CONSENT_TOKEN,
 });
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// --- Yapily OAuth: scambio code → consentToken ---
+app.get('/api/consent-callback', async (req, res) => {
+  try {
+    const { code, state } = req.query;
+    if (!code || !state) {
+      return res.status(400).json({ error: 'Parametri code e state richiesti' });
+    }
+
+    const { appUuid, appSecret, apiBase } = auth();
+    const basicToken = Buffer.from(`${appUuid}:${appSecret}`).toString('base64');
+
+    const yapilyRes = await fetch(`${apiBase}/consent-auth-code`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${basicToken}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ authCode: code, authState: state }),
+    });
+
+    const data = await yapilyRes.json();
+    if (!yapilyRes.ok) {
+      return res.status(yapilyRes.status).json({ error: data.message || data.error || 'Errore Yapily' });
+    }
+
+    const consentToken = data.data?.consentToken || data.consentToken;
+    if (!consentToken) {
+      return res.status(500).json({ error: 'Nessun consentToken nella risposta Yapily', raw: data });
+    }
+
+    // Aggiorna il .env automaticamente
+    const fs = await import('fs');
+    const envPath = path.join(__dirname, '.env');
+    let envContent = fs.readFileSync(envPath, 'utf8');
+    if (envContent.includes('YAPILY_CONSENT_TOKEN=')) {
+      envContent = envContent.replace(/YAPILY_CONSENT_TOKEN=.*/, `YAPILY_CONSENT_TOKEN=${consentToken}`);
+    } else {
+      envContent += `\nYAPILY_CONSENT_TOKEN=${consentToken}\n`;
+    }
+    fs.writeFileSync(envPath, envContent);
+
+    // Aggiorna anche in memoria per questa sessione
+    process.env.YAPILY_CONSENT_TOKEN = consentToken;
+
+    res.json({ status: data.data?.status || data.status, consentToken });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // --- API ---
 
@@ -139,15 +200,75 @@ app.get('/api/dashboard/:requisitionId', async (req, res) => {
   }
 });
 
+// Lista tutti gli account per il consent corrente
+app.get('/api/accounts', async (req, res) => {
+  try {
+    const accounts = await getAccounts(auth());
+    res.json(accounts);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Registra Expo push token
+app.post('/api/register-push-token', (req, res) => {
+  const { userId, token } = req.body;
+  if (!userId || !token) return res.status(400).json({ error: 'userId e token richiesti' });
+  savePushToken(userId, token);
+  res.json({ ok: true });
+});
+
+// Impostazioni utente
+app.get('/api/user/:userId/settings', (req, res) => {
+  res.json(getUserSettings(req.params.userId));
+});
+
+app.put('/api/user/:userId/settings', (req, res) => {
+  saveUserSettings(req.params.userId, req.body);
+  res.json(getUserSettings(req.params.userId));
+});
+
+// Statistiche mensili per grafici
+app.get('/api/accounts/:id/stats/monthly', async (req, res) => {
+  try {
+    const raw = await getAccountTransactions(req.params.id, auth());
+    const txList = raw.booked || [];
+    const daily = computeMonthlyStats(txList);
+    const categories = computeCategoryTotals(txList);
+    res.json({ daily, categories });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Multi-account: consents per utente
+app.get('/api/user/:userId/consents', (req, res) => {
+  res.json(getUserConsents(req.params.userId));
+});
+
+app.post('/api/user/:userId/consents', (req, res) => {
+  const { consentToken, institutionId, institutionName } = req.body;
+  addUserConsent(req.params.userId, { consentToken, institutionId, institutionName, addedAt: new Date().toISOString() });
+  res.json(getUserConsents(req.params.userId));
+});
+
+app.delete('/api/user/:userId/consents/:consentToken', (req, res) => {
+  removeUserConsent(req.params.userId, req.params.consentToken);
+  res.json({ ok: true });
+});
+
 // Fallback SPA
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Start polling after server boot
+startPolling(auth);
+
 app.listen(PORT, () => {
   console.log(`\n🚀 Autobank in ascolto su http://localhost:${PORT}`);
   console.log(`   API: /api/institutions, /api/requisitions, /api/accounts/:id/transactions`);
-  if (!process.env.OB_CLIENT_ID) {
-    console.log(`\n⚠️  Configura .env con OB_CLIENT_ID e OB_CLIENT_SECRET`);
+  if (!process.env.YAPILY_APPLICATION_UUID) {
+    console.log(`\n⚠️  Configura .env con YAPILY_APPLICATION_UUID e YAPILY_APPLICATION_SECRET`);
   }
 });

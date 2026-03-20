@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: autobank-api
+    runtime: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: YAPILY_APPLICATION_UUID
+        sync: false
+      - key: YAPILY_APPLICATION_SECRET
+        sync: false
+      - key: YAPILY_API_BASE
+        value: https://api.yapily.com
+      - key: YAPILY_CONSENT_TOKEN
+        sync: false
+      - key: PORT
+        value: "3000"

@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Autobank",
+    "slug": "autobank",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "scheme": "autobank",
+    "splash": {
+      "backgroundColor": "#0f1419"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.autobank.app",
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0f1419"
+      },
+      "package": "com.autobank.app"
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#3fb950"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id"
+      }
+    }
+  }
+}

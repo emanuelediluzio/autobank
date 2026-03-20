@@ -41,18 +41,50 @@
 </head>
 <body>
   <div class="box">
-    <h1>Banca collegata</h1>
-    <p>L'autenticazione è andata a buon fine. Puoi ora visualizzare le tue spese.</p>
-    <a href="/">Vai alla dashboard</a>
+    <h1 id="title">Collegamento in corso...</h1>
+    <p id="message">Scambio del codice di autorizzazione con Yapily...</p>
+    <a href="/" id="dashboard-link" style="display:none">Vai alla dashboard</a>
   </div>
   <script>
     const params = new URLSearchParams(window.location.search);
-    const fromUrl = params.get('requisition') || params.get('ref') || params.get('requisition_id');
-    const fromStorage = localStorage.getItem('autobank_requisition');
-    const requisition = fromUrl || fromStorage;
-    if (requisition) {
-      if (fromStorage) localStorage.removeItem('autobank_requisition');
-      window.location.replace('/?requisition=' + requisition);
+    const code = params.get('code');
+    const state = params.get('state');
+
+    // Flusso Yapily: scambia code → consentToken
+    if (code && state) {
+      fetch(`/api/consent-callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.consentToken) {
+            document.getElementById('title').textContent = 'Banca collegata!';
+            document.getElementById('title').style.color = '#3fb950';
+            document.getElementById('message').textContent =
+              'ConsentToken ottenuto e salvato. Puoi ora visualizzare le tue spese.';
+            document.getElementById('dashboard-link').style.display = 'inline-block';
+          } else {
+            document.getElementById('title').textContent = 'Errore';
+            document.getElementById('title').style.color = '#f85149';
+            document.getElementById('message').textContent = data.error || 'Errore nello scambio del token.';
+          }
+        })
+        .catch(err => {
+          document.getElementById('title').textContent = 'Errore';
+          document.getElementById('title').style.color = '#f85149';
+          document.getElementById('message').textContent = err.message;
+        });
+    } else {
+      // Fallback: flusso legacy con requisition
+      const fromUrl = params.get('requisition') || params.get('ref') || params.get('requisition_id');
+      const fromStorage = localStorage.getItem('autobank_requisition');
+      const requisition = fromUrl || fromStorage;
+      if (requisition) {
+        if (fromStorage) localStorage.removeItem('autobank_requisition');
+        window.location.replace('/?requisition=' + requisition);
+      } else {
+        document.getElementById('title').textContent = 'Nessun parametro ricevuto';
+        document.getElementById('title').style.color = '#f85149';
+        document.getElementById('message').textContent = 'Mancano code/state o requisition nella URL.';
+      }
     }
   </script>
 </body>
