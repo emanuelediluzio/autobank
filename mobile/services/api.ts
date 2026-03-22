@@ -3,7 +3,8 @@
 
 // In dev: use local IP. In prod: use Railway URL.
 // Set this via app.json extra or env.
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+// Expo injects EXPO_PUBLIC_ vars at build time
+const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? 'https://autobank-74kt.onrender.com/api';
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE}${path}`;

@@ -68,7 +68,11 @@ export async function getInstitutions(country = 'IT', auth = {}) {
   return items.filter((inst) => {
     const countries = inst.countries || inst.country || [];
     if (Array.isArray(countries)) {
-      return countries.map((c) => c.toUpperCase()).includes(upper);
+      return countries.some((c) => {
+        // c can be a string "IT" or an object { countryCode2: "IT" }
+        const code = typeof c === 'string' ? c : (c.countryCode2 || c.code || '');
+        return code.toUpperCase() === upper;
+      });
     }
     return String(countries).toUpperCase() === upper;
   });

@@ -13,16 +13,28 @@ interface Props {
 export function BankPicker({ country, onSelect, selected }: Props) {
   const [banks, setBanks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     setLoading(true);
     getInstitutions(country)
-      .then(setBanks)
-      .catch(() => setBanks([]))
+      .then((data) => {
+        console.log('Banks loaded:', data?.length);
+        setBanks(data || []);
+      })
+      .catch((err) => {
+        console.error('BankPicker error:', err.message);
+        setError(err.message);
+        setBanks([]);
+      })
       .finally(() => setLoading(false));
   }, [country]);
 
   if (loading) return <ActivityIndicator color={theme.colors.accent} style={{ marginTop: 20 }} />;
+
+  if (error) return <Text style={{ color: theme.colors.danger, padding: 16 }}>Errore: {error}</Text>;
+
+  if (banks.length === 0) return <Text style={{ color: theme.colors.textMuted, padding: 16 }}>Nessuna banca trovata per questo paese</Text>;
 
   return (
     <FlatList
