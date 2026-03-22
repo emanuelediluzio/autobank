@@ -48,7 +48,8 @@ async function yapilyRequest(path, { method = 'GET', headers = {}, body, authCon
   const data = text ? JSON.parse(text) : {};
 
   if (!res.ok) {
-    const msg = data.error || data.message || data.description || `HTTP ${res.status}`;
+    const errData = data.error || data.message || data.description || data;
+    const msg = typeof errData === 'object' ? JSON.stringify(errData) : errData;
     throw new Error(`Yapily API error: ${msg}`);
   }
 
@@ -105,22 +106,18 @@ export async function createRequisition(params, auth = {}) {
     applicationUserId: reference || `user-${Date.now()}`,
     institutionId,
     callback: redirect,
-    // Verifica i permissions esatti nella doc Yapily
-    permissions: [
-      'ACCOUNT',
-      'ACCOUNT_TRANSACTIONS',
-    ],
   };
 
-  const data = await yapilyRequest('/consents', {
+  const data = await yapilyRequest('/account-auth-requests', {
     method: 'POST',
     body,
     authConfig: auth,
   });
 
-  // La struttura esatta dipende dalla versione API, qui usiamo nomi tipici
-  const consentId = data.id || data.consentToken || data.consentId;
-  const link = data.authorisationUrl || data.authorisationURL || data._links?.authorise?.href;
+  // Yapily wraps response in data object
+  const inner = data.data || data;
+  const consentId = inner.id || inner.consentToken || inner.consentId;
+  const link = inner.authorisationUrl || inner.authorisationURL || inner.qrCodeUrl;
 
   if (!consentId || !link) {
     throw new Error('Risposta Yapily senza consentId/link. Controlla la configurazione e la doc Yapily.');
