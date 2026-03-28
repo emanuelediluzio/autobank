@@ -6,7 +6,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../store/useAuthStore';
-import { createRequisition, exchangeConsentCode } from '../services/api';
+import { createRequisition } from '../services/api';
 import { BankPicker } from '../components/BankPicker';
 import { theme } from '../theme';
 
@@ -33,24 +33,23 @@ export default function OnboardingScreen() {
     try {
       const { link } = await createRequisition(selectedBank.id);
 
-      // Open bank auth in system browser
-      const result = await WebBrowser.openAuthSessionAsync(
-        link,
-        Linking.createURL('callback')
-      );
+      // The redirect URL is autobank://callback — the server will redirect there after exchanging the code
+      const redirectUrl = 'autobank://callback';
+
+      const result = await WebBrowser.openAuthSessionAsync(link, redirectUrl);
 
       if (result.type === 'success' && result.url) {
         const url = new URL(result.url);
-        const code = url.searchParams.get('code');
-        const state = url.searchParams.get('state');
+        const consentToken = url.searchParams.get('consentToken');
 
-        if (code && state) {
-          const { consentToken } = await exchangeConsentCode(code, state);
+        if (consentToken) {
           await setConsentToken(consentToken);
           router.replace('/(tabs)');
         } else {
-          setError('Nessun codice ricevuto dalla banca.');
+          setError('Nessun token ricevuto. Riprova.');
         }
+      } else if (result.type === 'cancel') {
+        setError('Autorizzazione annullata.');
       }
     } catch (e: any) {
       setError(e.message);

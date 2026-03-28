@@ -93,6 +93,43 @@ app.get('/api/consent-callback', async (req, res) => {
   }
 });
 
+// Mobile app callback: Yapily redirects here, we exchange code and redirect to app deep link
+app.get('/callback', async (req, res) => {
+  try {
+    const { code, state } = req.query;
+    if (!code || !state) {
+      return res.status(400).send('Missing code or state');
+    }
+
+    const { appUuid, appSecret, apiBase } = auth();
+    const basicToken = Buffer.from(`${appUuid}:${appSecret}`).toString('base64');
+
+    const yapilyRes = await fetch(`${apiBase}/consent-auth-code`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${basicToken}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ authCode: code, authState: state }),
+    });
+
+    const data = await yapilyRes.json();
+    const consentToken = data.data?.consentToken || data.consentToken;
+
+    if (consentToken) {
+      process.env.YAPILY_CONSENT_TOKEN = consentToken;
+      // Redirect to Expo app deep link with token
+      const appRedirect = `autobank://callback?consentToken=${encodeURIComponent(consentToken)}`;
+      res.redirect(appRedirect);
+    } else {
+      res.status(500).send('Failed to get consent token from Yapily');
+    }
+  } catch (e) {
+    res.status(500).send(`Error: ${e.message}`);
+  }
+});
+
 // --- API ---
 
 // Lista banche per paese
@@ -109,7 +146,7 @@ app.get('/api/institutions', async (req, res) => {
 // Crea requisition (link per collegare banca)
 app.post('/api/requisitions', async (req, res) => {
   try {
-    const redirect = process.env.REDIRECT_URL || `${req.protocol}://${req.get('host')}/callback.html`;
+    const redirect = process.env.REDIRECT_URL || `${req.protocol}://${req.get('host')}/callback`;
     const { institutionId, reference, country } = req.body;
     const reqData = await createRequisition(
       {
