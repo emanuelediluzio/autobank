@@ -97,12 +97,19 @@ app.get('/api/consent-callback', async (req, res) => {
 // Yapily supports TWO flows:
 //   Flow A (default): redirects with ?consent=<token> directly
 //   Flow B (custom):  redirects with ?code=<code>&state=<state> for exchange
-app.get('/callback', async (req, res) => {
+app.all('/callback', async (req, res) => {
   try {
+    console.log('[callback] Method:', req.method);
     console.log('[callback] Query params:', JSON.stringify(req.query));
+    console.log('[callback] Body:', JSON.stringify(req.body));
+    console.log('[callback] Full URL:', req.originalUrl);
+    console.log('[callback] Headers:', JSON.stringify(req.headers).slice(0, 500));
+
+    // Merge query and body params (Yapily may POST or GET)
+    const params = { ...req.query, ...req.body };
 
     // Flow A: Yapily default — consent token arrives directly
-    const directConsent = req.query.consent;
+    const directConsent = params.consent || params.consentToken;
     if (directConsent) {
       console.log('[callback] Flow A: consent token received directly');
       process.env.YAPILY_CONSENT_TOKEN = directConsent;
@@ -111,10 +118,10 @@ app.get('/callback', async (req, res) => {
     }
 
     // Flow B: Custom redirect — exchange one-time-token/code for consent
-    const { code, state } = req.query;
+    const { code, state } = params;
 
     // Yapily may also use 'application-user-id' or 'user-uuid' or 'one-time-token'
-    const oneTimeToken = req.query['one-time-token'] || req.query.ott;
+    const oneTimeToken = params['one-time-token'] || params.ott;
 
     if (oneTimeToken) {
       console.log('[callback] Flow B (OTT): exchanging one-time-token');
@@ -171,10 +178,13 @@ app.get('/callback', async (req, res) => {
     }
 
     // Fallback: log all params for debugging and show a friendly page
-    console.log('[callback] Unknown flow, all query params:', JSON.stringify(req.query));
+    console.log('[callback] Unknown flow, all params:', JSON.stringify(params));
     res.status(400).send(`
       <h2>Callback ricevuto</h2>
-      <p>Parametri: ${JSON.stringify(req.query)}</p>
+      <p>Method: ${req.method}</p>
+      <p>Query: ${JSON.stringify(req.query)}</p>
+      <p>Body: ${JSON.stringify(req.body)}</p>
+      <p>Full URL: ${req.originalUrl}</p>
       <p>Se vedi questo, il redirect da Yapily è arrivato ma con parametri non riconosciuti.</p>
     `);
   } catch (e) {
