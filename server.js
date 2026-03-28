@@ -248,7 +248,6 @@ app.all('/callback', async (req, res) => {
   debug.textContent += ' | Nessun consent/code trovato. Controlla i log Render.';
 })();
 </script></body></html>`);
-    }
   } catch (e) {
     console.error('[callback] Error:', e.message);
     res.status(500).send(`Error: ${e.message}`);
