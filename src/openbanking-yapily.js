@@ -108,16 +108,23 @@ export async function createRequisition(params, auth = {}) {
     callback: redirect,
   };
 
+  console.log('[createRequisition] Request body:', JSON.stringify(body));
+
   const data = await yapilyRequest('/account-auth-requests', {
     method: 'POST',
     body,
     authConfig: auth,
   });
 
+  console.log('[createRequisition] Full Yapily response:', JSON.stringify(data).slice(0, 1000));
+
   // Yapily wraps response in data object
   const inner = data.data || data;
   const consentId = inner.id || inner.consentToken || inner.consentId;
   const link = inner.authorisationUrl || inner.authorisationURL || inner.qrCodeUrl;
+
+  console.log('[createRequisition] authorisationUrl:', link);
+  console.log('[createRequisition] consentId:', consentId);
 
   if (!consentId || !link) {
     throw new Error('Risposta Yapily senza consentId/link. Controlla la configurazione e la doc Yapily.');
