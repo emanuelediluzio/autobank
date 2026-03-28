@@ -93,39 +93,92 @@ app.get('/api/consent-callback', async (req, res) => {
   }
 });
 
-// Mobile app callback: Yapily redirects here, we exchange code and redirect to app deep link
+// Mobile app callback: Yapily redirects here, we redirect to app deep link
+// Yapily supports TWO flows:
+//   Flow A (default): redirects with ?consent=<token> directly
+//   Flow B (custom):  redirects with ?code=<code>&state=<state> for exchange
 app.get('/callback', async (req, res) => {
   try {
+    console.log('[callback] Query params:', JSON.stringify(req.query));
+
+    // Flow A: Yapily default — consent token arrives directly
+    const directConsent = req.query.consent;
+    if (directConsent) {
+      console.log('[callback] Flow A: consent token received directly');
+      process.env.YAPILY_CONSENT_TOKEN = directConsent;
+      const appRedirect = `autobank://callback?consentToken=${encodeURIComponent(directConsent)}`;
+      return res.redirect(appRedirect);
+    }
+
+    // Flow B: Custom redirect — exchange one-time-token/code for consent
     const { code, state } = req.query;
-    if (!code || !state) {
-      return res.status(400).send('Missing code or state');
+
+    // Yapily may also use 'application-user-id' or 'user-uuid' or 'one-time-token'
+    const oneTimeToken = req.query['one-time-token'] || req.query.ott;
+
+    if (oneTimeToken) {
+      console.log('[callback] Flow B (OTT): exchanging one-time-token');
+      const { appUuid, appSecret, apiBase } = auth();
+      const basicToken = Buffer.from(`${appUuid}:${appSecret}`).toString('base64');
+
+      const yapilyRes = await fetch(`${apiBase}/exchange-one-time-token`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${basicToken}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ oneTimeToken }),
+      });
+
+      const data = await yapilyRes.json();
+      console.log('[callback] OTT exchange response:', JSON.stringify(data).slice(0, 500));
+      const consentToken = data.data?.consentToken || data.consentToken;
+
+      if (consentToken) {
+        process.env.YAPILY_CONSENT_TOKEN = consentToken;
+        const appRedirect = `autobank://callback?consentToken=${encodeURIComponent(consentToken)}`;
+        return res.redirect(appRedirect);
+      }
+      return res.status(500).send('OTT exchange failed: no consent token');
     }
 
-    const { appUuid, appSecret, apiBase } = auth();
-    const basicToken = Buffer.from(`${appUuid}:${appSecret}`).toString('base64');
+    if (code && state) {
+      console.log('[callback] Flow B (code): exchanging auth code');
+      const { appUuid, appSecret, apiBase } = auth();
+      const basicToken = Buffer.from(`${appUuid}:${appSecret}`).toString('base64');
 
-    const yapilyRes = await fetch(`${apiBase}/consent-auth-code`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Basic ${basicToken}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({ authCode: code, authState: state }),
-    });
+      const yapilyRes = await fetch(`${apiBase}/consent-auth-code`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${basicToken}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ authCode: code, authState: state }),
+      });
 
-    const data = await yapilyRes.json();
-    const consentToken = data.data?.consentToken || data.consentToken;
+      const data = await yapilyRes.json();
+      console.log('[callback] Code exchange response:', JSON.stringify(data).slice(0, 500));
+      const consentToken = data.data?.consentToken || data.consentToken;
 
-    if (consentToken) {
-      process.env.YAPILY_CONSENT_TOKEN = consentToken;
-      // Redirect to Expo app deep link with token
-      const appRedirect = `autobank://callback?consentToken=${encodeURIComponent(consentToken)}`;
-      res.redirect(appRedirect);
-    } else {
-      res.status(500).send('Failed to get consent token from Yapily');
+      if (consentToken) {
+        process.env.YAPILY_CONSENT_TOKEN = consentToken;
+        const appRedirect = `autobank://callback?consentToken=${encodeURIComponent(consentToken)}`;
+        return res.redirect(appRedirect);
+      }
+      return res.status(500).send('Code exchange failed: no consent token');
     }
+
+    // Fallback: log all params for debugging and show a friendly page
+    console.log('[callback] Unknown flow, all query params:', JSON.stringify(req.query));
+    res.status(400).send(`
+      <h2>Callback ricevuto</h2>
+      <p>Parametri: ${JSON.stringify(req.query)}</p>
+      <p>Se vedi questo, il redirect da Yapily è arrivato ma con parametri non riconosciuti.</p>
+    `);
   } catch (e) {
+    console.error('[callback] Error:', e.message);
     res.status(500).send(`Error: ${e.message}`);
   }
 });
@@ -147,6 +200,7 @@ app.get('/api/institutions', async (req, res) => {
 app.post('/api/requisitions', async (req, res) => {
   try {
     const redirect = process.env.REDIRECT_URL || `https://${req.get('host')}/callback`;
+    console.log('[requisition] Using redirect URL:', redirect);
     const { institutionId, reference, country } = req.body;
     const reqData = await createRequisition(
       {
