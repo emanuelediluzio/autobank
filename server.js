@@ -177,16 +177,78 @@ app.all('/callback', async (req, res) => {
       return res.status(500).send('Code exchange failed: no consent token');
     }
 
-    // Fallback: log all params for debugging and show a friendly page
-    console.log('[callback] Unknown flow, all params:', JSON.stringify(params));
-    res.status(400).send(`
-      <h2>Callback ricevuto</h2>
-      <p>Method: ${req.method}</p>
-      <p>Query: ${JSON.stringify(req.query)}</p>
-      <p>Body: ${JSON.stringify(req.body)}</p>
-      <p>Full URL: ${req.originalUrl}</p>
-      <p>Se vedi questo, il redirect da Yapily è arrivato ma con parametri non riconosciuti.</p>
-    `);
+    // Fallback: serve HTML page that reads fragment (#) params from URL
+    // Yapily may send consent token as fragment instead of query param
+    console.log('[callback] No params found, serving fragment reader HTML');
+    res.send(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Autobank - Collegamento in corso...</title>
+<style>body{font-family:system-ui;background:#0f1419;color:#e6edf3;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column}
+.spinner{border:3px solid #30363d;border-top:3px solid #3fb950;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#status{margin-top:20px;font-size:15px}#debug{margin-top:16px;font-size:12px;color:#8b949e;max-width:90%;word-break:break-all}</style></head>
+<body>
+<div class="spinner"></div>
+<div id="status">Collegamento in corso...</div>
+<div id="debug"></div>
+<script>
+(function() {
+  var debug = document.getElementById('debug');
+  var status = document.getElementById('status');
+  var fullUrl = window.location.href;
+  var hash = window.location.hash;
+  var search = window.location.search;
+
+  debug.textContent = 'URL: ' + fullUrl;
+  console.log('[callback-client] Full URL:', fullUrl);
+  console.log('[callback-client] Hash:', hash);
+  console.log('[callback-client] Search:', search);
+
+  // Parse both fragment and query params
+  var params = {};
+  if (hash && hash.length > 1) {
+    new URLSearchParams(hash.substring(1)).forEach(function(v, k) { params[k] = v; });
+  }
+  if (search && search.length > 1) {
+    new URLSearchParams(search).forEach(function(v, k) { params[k] = v; });
+  }
+
+  console.log('[callback-client] Parsed params:', JSON.stringify(params));
+  debug.textContent += ' | Params: ' + JSON.stringify(params);
+
+  var consent = params.consent || params.consentToken || params['consent-token'];
+  var code = params.code || params.authCode;
+  var stateVal = params.state || params.authState;
+
+  if (consent) {
+    status.textContent = 'Token ricevuto! Ritorno all\\'app...';
+    window.location.href = 'autobank://callback?consentToken=' + encodeURIComponent(consent);
+    return;
+  }
+
+  if (code && stateVal) {
+    status.textContent = 'Scambio codice in corso...';
+    fetch('/api/consent-callback?code=' + encodeURIComponent(code) + '&state=' + encodeURIComponent(stateVal))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.consentToken) {
+          status.textContent = 'Token ricevuto! Ritorno all\\'app...';
+          window.location.href = 'autobank://callback?consentToken=' + encodeURIComponent(data.consentToken);
+        } else {
+          status.textContent = 'Errore: nessun token ricevuto';
+          debug.textContent += ' | Response: ' + JSON.stringify(data);
+        }
+      })
+      .catch(function(e) { status.textContent = 'Errore: ' + e.message; });
+    return;
+  }
+
+  // No params found at all — show debug info
+  status.textContent = 'Nessun parametro ricevuto da Yapily';
+  debug.textContent += ' | Nessun consent/code trovato. Controlla i log Render.';
+})();
+</script></body></html>`);
+    }
   } catch (e) {
     console.error('[callback] Error:', e.message);
     res.status(500).send(`Error: ${e.message}`);
