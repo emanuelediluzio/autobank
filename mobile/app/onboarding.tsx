@@ -33,57 +33,33 @@ export default function OnboardingScreen() {
     try {
       const { id: consentId, link } = await createRequisition(selectedBank.id);
 
-      // Open bank auth page — don't rely on callback redirect,
-      // we'll poll the consent status instead
-      const redirectUrl = 'autobank://callback';
+      // Open bank auth in browser (no callback needed — Yapily handles via auth.yapily.com)
+      // Use openBrowserAsync so user can close it manually when done
+      await WebBrowser.openBrowserAsync(link);
 
-      // Start polling BEFORE opening browser
-      let authorized = false;
+      // After browser closes, poll for consent status
+      // Yapily exchanges the code via auth.yapily.com automatically
+      setError('');
       let consentToken: string | null = null;
-      const pollInterval = setInterval(async () => {
+      const maxAttempts = 30; // 60 seconds max
+
+      for (let i = 0; i < maxAttempts; i++) {
         try {
           const res = await getConsentStatus(consentId);
+          console.log(`Poll ${i + 1}: status=${res.status}`);
           if (res.status === 'AUTHORIZED' && res.consentToken) {
-            authorized = true;
             consentToken = res.consentToken;
-            clearInterval(pollInterval);
+            break;
           }
         } catch {}
-      }, 2000);
-
-      const result = await WebBrowser.openAuthSessionAsync(link, redirectUrl);
-
-      // Stop polling when browser closes
-      clearInterval(pollInterval);
-
-      // Check if we got token from callback redirect
-      if (result.type === 'success' && result.url) {
-        const url = new URL(result.url);
-        const callbackToken = url.searchParams.get('consentToken');
-        if (callbackToken) {
-          consentToken = callbackToken;
-          authorized = true;
-        }
-      }
-
-      // If not from callback, do a final poll check
-      if (!authorized) {
-        // Wait a moment for Yapily to process
         await new Promise(r => setTimeout(r, 2000));
-        const finalCheck = await getConsentStatus(consentId);
-        if (finalCheck.status === 'AUTHORIZED' && finalCheck.consentToken) {
-          consentToken = finalCheck.consentToken;
-          authorized = true;
-        }
       }
 
-      if (authorized && consentToken) {
+      if (consentToken) {
         await setConsentToken(consentToken);
         router.replace('/(tabs)');
-      } else if (result.type === 'cancel') {
-        setError('Autorizzazione annullata. Se hai completato il login in banca, riprova tra qualche secondo.');
       } else {
-        setError('Autorizzazione non completata. Riprova.');
+        setError('Autorizzazione non completata. Completa il login nella banca e riprova.');
       }
     } catch (e: any) {
       setError(e.message);
