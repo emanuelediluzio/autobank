@@ -146,7 +146,7 @@ app.get('/api/institutions', async (req, res) => {
 // Crea requisition (link per collegare banca)
 app.post('/api/requisitions', async (req, res) => {
   try {
-    const redirect = process.env.REDIRECT_URL || `${req.protocol}://${req.get('host')}/callback`;
+    const redirect = process.env.REDIRECT_URL || `https://${req.get('host')}/callback`;
     const { institutionId, reference, country } = req.body;
     const reqData = await createRequisition(
       {
