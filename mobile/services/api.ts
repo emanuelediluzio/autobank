@@ -32,6 +32,10 @@ export const createRequisition = (institutionId: string) =>
 export const exchangeConsentCode = (code: string, state: string) =>
   request<{ consentToken: string; status: string }>(`/consent-callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`);
 
+// Poll consent status
+export const getConsentStatus = (consentId: string) =>
+  request<{ status: string; consentToken: string | null }>(`/consents/${consentId}/status`);
+
 // Accounts
 export const getAccounts = () =>
   request<any[]>('/accounts');

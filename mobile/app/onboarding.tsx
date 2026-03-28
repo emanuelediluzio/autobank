@@ -6,7 +6,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../store/useAuthStore';
-import { createRequisition } from '../services/api';
+import { createRequisition, getConsentStatus } from '../services/api';
 import { BankPicker } from '../components/BankPicker';
 import { theme } from '../theme';
 
@@ -31,25 +31,59 @@ export default function OnboardingScreen() {
     setError('');
 
     try {
-      const { link } = await createRequisition(selectedBank.id);
+      const { id: consentId, link } = await createRequisition(selectedBank.id);
 
-      // The redirect URL is autobank://callback — the server will redirect there after exchanging the code
+      // Open bank auth page — don't rely on callback redirect,
+      // we'll poll the consent status instead
       const redirectUrl = 'autobank://callback';
+
+      // Start polling BEFORE opening browser
+      let authorized = false;
+      let consentToken: string | null = null;
+      const pollInterval = setInterval(async () => {
+        try {
+          const res = await getConsentStatus(consentId);
+          if (res.status === 'AUTHORIZED' && res.consentToken) {
+            authorized = true;
+            consentToken = res.consentToken;
+            clearInterval(pollInterval);
+          }
+        } catch {}
+      }, 2000);
 
       const result = await WebBrowser.openAuthSessionAsync(link, redirectUrl);
 
+      // Stop polling when browser closes
+      clearInterval(pollInterval);
+
+      // Check if we got token from callback redirect
       if (result.type === 'success' && result.url) {
         const url = new URL(result.url);
-        const consentToken = url.searchParams.get('consentToken');
-
-        if (consentToken) {
-          await setConsentToken(consentToken);
-          router.replace('/(tabs)');
-        } else {
-          setError('Nessun token ricevuto. Riprova.');
+        const callbackToken = url.searchParams.get('consentToken');
+        if (callbackToken) {
+          consentToken = callbackToken;
+          authorized = true;
         }
+      }
+
+      // If not from callback, do a final poll check
+      if (!authorized) {
+        // Wait a moment for Yapily to process
+        await new Promise(r => setTimeout(r, 2000));
+        const finalCheck = await getConsentStatus(consentId);
+        if (finalCheck.status === 'AUTHORIZED' && finalCheck.consentToken) {
+          consentToken = finalCheck.consentToken;
+          authorized = true;
+        }
+      }
+
+      if (authorized && consentToken) {
+        await setConsentToken(consentToken);
+        router.replace('/(tabs)');
       } else if (result.type === 'cancel') {
-        setError('Autorizzazione annullata.');
+        setError('Autorizzazione annullata. Se hai completato il login in banca, riprova tra qualche secondo.');
+      } else {
+        setError('Autorizzazione non completata. Riprova.');
       }
     } catch (e: any) {
       setError(e.message);

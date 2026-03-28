@@ -256,6 +256,36 @@ app.all('/callback', async (req, res) => {
 
 // --- API ---
 
+// Poll consent status (per mobile app che non riceve il callback)
+app.get('/api/consents/:id/status', async (req, res) => {
+  try {
+    const { appUuid, appSecret, apiBase } = auth();
+    const basicToken = Buffer.from(`${appUuid}:${appSecret}`).toString('base64');
+
+    const yapilyRes = await fetch(`${apiBase}/consents/${req.params.id}`, {
+      headers: {
+        Authorization: `Basic ${basicToken}`,
+        Accept: 'application/json',
+      },
+    });
+
+    const data = await yapilyRes.json();
+    const inner = data.data || data;
+    const status = inner.status;
+    const consentToken = inner.consentToken || inner.id;
+
+    console.log(`[consent-poll] id=${req.params.id} status=${status}`);
+
+    if (status === 'AUTHORIZED') {
+      process.env.YAPILY_CONSENT_TOKEN = consentToken;
+    }
+
+    res.json({ status, consentToken: status === 'AUTHORIZED' ? consentToken : null });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Lista banche per paese
 app.get('/api/institutions', async (req, res) => {
   try {
