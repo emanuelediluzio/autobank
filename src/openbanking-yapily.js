@@ -102,12 +102,14 @@ export async function createRequisition(params, auth = {}) {
     throw new Error('institutionId richiesto per creare un consent Yapily');
   }
 
-  // NON passiamo il callback: così Yapily usa auth.yapily.com come intermediario,
-  // scambia il codice automaticamente e il consent diventa AUTHORIZED.
-  // Il mobile polla lo status del consent per sapere quando è pronto.
+  // Yapily usa auth.yapily.com come intermediario per gestire i fragment OIDC.
+  // Con oneTimeToken: true, Yapily manda ?one-time-token=XXX al nostro callback
+  // come query param (non fragment), che il server può leggere e scambiare.
   const body = {
     applicationUserId: reference || `user-${Date.now()}`,
     institutionId,
+    callback: redirect,
+    oneTimeToken: true,
   };
 
   console.log('[createRequisition] Request body:', JSON.stringify(body));

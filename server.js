@@ -128,7 +128,7 @@ app.all('/callback', async (req, res) => {
       const { appUuid, appSecret, apiBase } = auth();
       const basicToken = Buffer.from(`${appUuid}:${appSecret}`).toString('base64');
 
-      const yapilyRes = await fetch(`${apiBase}/exchange-one-time-token`, {
+      const yapilyRes = await fetch(`${apiBase}/consent-one-time-token`, {
         method: 'POST',
         headers: {
           Authorization: `Basic ${basicToken}`,
