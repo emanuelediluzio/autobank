@@ -17,23 +17,36 @@ export function TransactionItem({ description, amount, currency = 'EUR', date, c
 
   return (
     <View style={styles.row}>
-      <Text style={styles.icon}>{categoryIcon || '\uD83D\uDCE6'}</Text>
+      <View style={[styles.iconCircle, { backgroundColor: isExpense ? 'rgba(255, 59, 48, 0.1)' : 'rgba(0, 214, 50, 0.1)' }]}>
+        <Text style={styles.icon}>{categoryIcon || '\uD83D\uDCE6'}</Text>
+      </View>
       <View style={styles.info}>
         <Text style={styles.desc} numberOfLines={1}>{description}</Text>
-        <Text style={styles.meta}>{categoryLabel || 'Altro'} \u00b7 {formatDate(date)}</Text>
+        <Text style={styles.meta}>{categoryLabel || 'Altro'} · {formatDate(date)}</Text>
       </View>
-      <Text style={[styles.amount, { color: isExpense ? theme.colors.danger : theme.colors.accent }]}>
-        {formatAmount(amount, currency)}
-      </Text>
+      <View style={styles.amountWrap}>
+        <Text style={[styles.amount, { color: isExpense ? theme.colors.danger : theme.colors.accent }]}>
+          {formatAmount(amount, currency)}
+        </Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
-  icon: { fontSize: 20, marginRight: 12 },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
+  iconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  icon: { fontSize: 18 },
   info: { flex: 1 },
-  desc: { color: theme.colors.text, fontSize: 14, fontWeight: '500' },
-  meta: { color: theme.colors.textMuted, fontSize: 12, marginTop: 2 },
-  amount: { fontSize: 14, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  desc: { color: theme.colors.text, fontSize: 15, fontWeight: '500' },
+  meta: { color: theme.colors.textMuted, fontSize: 12, marginTop: 3 },
+  amountWrap: { alignItems: 'flex-end', marginLeft: 12 },
+  amount: { fontSize: 15, fontWeight: '700', fontVariant: ['tabular-nums'] },
 });

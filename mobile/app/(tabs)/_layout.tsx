@@ -8,15 +8,15 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarStyle: {
-          backgroundColor: theme.colors.surface,
-          borderTopColor: theme.colors.border,
+          backgroundColor: '#000000',
+          borderTopColor: '#111111',
           borderTopWidth: 1,
           height: 85,
           paddingBottom: 30,
           paddingTop: 8,
         },
-        tabBarActiveTintColor: theme.colors.accent,
-        tabBarInactiveTintColor: theme.colors.textMuted,
+        tabBarActiveTintColor: '#00d632',
+        tabBarInactiveTintColor: '#444444',
         headerStyle: { backgroundColor: theme.colors.bg },
         headerTintColor: theme.colors.text,
         headerTitleStyle: { fontWeight: '700' },
@@ -26,28 +26,28 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => <Ionicons name="pie-chart" size={size} color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="pie-chart" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="transactions"
         options={{
           title: 'Movimenti',
-          tabBarIcon: ({ color, size }) => <Ionicons name="list" size={size} color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="list" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="accounts"
         options={{
           title: 'Conti',
-          tabBarIcon: ({ color, size }) => <Ionicons name="wallet" size={size} color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="wallet" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profilo',
-          tabBarIcon: ({ color, size }) => <Ionicons name="person" size={size} color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="person" size={22} color={color} />,
         }}
       />
     </Tabs>

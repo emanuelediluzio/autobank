@@ -2,6 +2,7 @@
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import type { EventSubscription } from 'expo-modules-core';
 import * as Device from 'expo-device';
 import { registerPushToken } from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
@@ -11,14 +12,15 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
-    shouldShowInForeground: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
 export function useNotifications() {
   const { userId } = useAuthStore();
-  const notificationListener = useRef<Notifications.EventSubscription>();
-  const responseListener = useRef<Notifications.EventSubscription>();
+  const notificationListener = useRef<EventSubscription>(null);
+  const responseListener = useRef<EventSubscription>(null);
 
   useEffect(() => {
     registerForPushNotificationsAsync().then(token => {
@@ -63,6 +65,6 @@ async function registerForPushNotificationsAsync(): Promise<string | null> {
     });
   }
 
-  const tokenData = await Notifications.getExpoPushTokenAsync();
+  const tokenData = await Notifications.getExpoPushTokenAsync({ projectId: 'autobank' });
   return tokenData.data;
 }
