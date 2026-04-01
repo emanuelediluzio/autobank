@@ -33,7 +33,7 @@ export default function AccountsScreen() {
               <View style={styles.cardTop}>
                 <Ionicons name="wallet" size={24} color={theme.colors.accent} />
                 <View style={styles.cardInfo}>
-                  <Text style={styles.bankName}>{item.institutionId || item.type || 'Conto'}</Text>
+                  <Text style={styles.bankName}>{item.nickname || item.accountNames?.[0]?.name || item.type || item.institutionId?.replace(/_/g, ' ').replace(/-/g, ' ') || 'Conto'}</Text>
                   <Text style={styles.iban}>{item.iban || item.accountNumber || id}</Text>
                 </View>
               </View>

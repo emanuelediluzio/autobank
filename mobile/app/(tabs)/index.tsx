@@ -1,6 +1,6 @@
 // mobile/app/(tabs)/index.tsx
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, RefreshControl, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, StyleSheet, ActivityIndicator } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useTransactionStore } from '../../store/useTransactionStore';
@@ -12,13 +12,25 @@ import { theme } from '../../theme';
 
 export default function DashboardScreen() {
   const { isOnboarded } = useAuthStore();
-  const { accounts, transactions, balances, stats, loading, fetchAll } = useTransactionStore();
+  const { accounts, transactions, balances, stats, loading, error, fetchAll } = useTransactionStore();
+  const [initialLoad, setInitialLoad] = useState(true);
 
   useEffect(() => {
-    if (isOnboarded) fetchAll();
+    if (isOnboarded) {
+      fetchAll().finally(() => setInitialLoad(false));
+    }
   }, [isOnboarded]);
 
   if (!isOnboarded) return <Redirect href="/onboarding" />;
+
+  if (initialLoad && loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.accent} />
+        <Text style={styles.loadingText}>Caricamento dati bancari...</Text>
+      </View>
+    );
+  }
 
   // Aggregate across all accounts
   const allTxs = Object.values(transactions).flat();
@@ -74,7 +86,7 @@ export default function DashboardScreen() {
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Ultimi movimenti</Text>
-        {recentTxs.map((tx, i) => (
+        {recentTxs.length > 0 ? recentTxs.map((tx, i) => (
           <TransactionItem
             key={tx.transactionId || tx.id || i}
             description={tx.remittanceInformationUnstructured || tx.creditorName || tx.debtorName || 'Transazione'}
@@ -84,8 +96,14 @@ export default function DashboardScreen() {
             categoryLabel={tx.category?.label}
             categoryIcon={tx.category?.icon}
           />
-        ))}
+        )) : (
+          <Text style={styles.emptyText}>Nessun movimento recente</Text>
+        )}
       </View>
+
+      {error ? (
+        <Text style={styles.errorText}>{error}</Text>
+      ) : null}
     </ScrollView>
   );
 }
@@ -97,4 +115,8 @@ const styles = StyleSheet.create({
   summaryRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
   card: { backgroundColor: theme.colors.surface, borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: theme.colors.border },
   cardTitle: { fontSize: 15, fontWeight: '600', color: theme.colors.text, marginBottom: 12 },
+  loadingContainer: { flex: 1, backgroundColor: theme.colors.bg, alignItems: 'center', justifyContent: 'center' },
+  loadingText: { color: theme.colors.textMuted, marginTop: 16, fontSize: 15 },
+  emptyText: { color: theme.colors.textMuted, textAlign: 'center', paddingVertical: 16 },
+  errorText: { color: theme.colors.danger, textAlign: 'center', marginTop: 8, fontSize: 13 },
 });

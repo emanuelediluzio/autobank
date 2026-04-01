@@ -1,6 +1,6 @@
 // mobile/app/(tabs)/transactions.tsx
 import { useState, useMemo } from 'react';
-import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
 import { useTransactionStore } from '../../store/useTransactionStore';
 import { TransactionItem } from '../../components/TransactionItem';
 import { theme } from '../../theme';
@@ -71,7 +71,11 @@ export default function TransactionsScreen() {
           />
         )}
         contentContainerStyle={styles.list}
-        ListEmptyComponent={<Text style={styles.empty}>Nessun movimento trovato</Text>}
+        ListEmptyComponent={
+          loading
+            ? <ActivityIndicator size="large" color={theme.colors.accent} style={{ marginTop: 40 }} />
+            : <Text style={styles.empty}>Nessun movimento trovato</Text>
+        }
       />
     </View>
   );

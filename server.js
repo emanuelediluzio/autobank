@@ -352,9 +352,9 @@ app.get('/api/accounts/:id/balances', async (req, res) => {
 app.get('/api/accounts/:id/transactions', async (req, res) => {
   try {
     const raw = await getAccountTransactions(req.params.id, auth());
-    const categorized = categorizeTransactions(raw.transactions || {});
+    // raw = { booked: [...], pending: [] } — passalo direttamente
+    const categorized = categorizeTransactions(raw);
     res.json({
-      ...raw,
       transactions: categorized,
       byCategory: groupByCategory({ booked: categorized.booked }),
     });
@@ -376,7 +376,7 @@ app.get('/api/dashboard/:requisitionId', async (req, res) => {
         getAccountBalances(accountId, auth()),
         getAccountTransactions(accountId, auth()),
       ]);
-      const categorized = categorizeTransactions(txRaw.transactions || {});
+      const categorized = categorizeTransactions(txRaw);
       results.push({
         accountId,
         details,
