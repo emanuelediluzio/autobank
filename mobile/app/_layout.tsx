@@ -41,7 +41,7 @@ const lockStyles = StyleSheet.create({
     paddingHorizontal: 40,
     borderRadius: 12,
   },
-  btnText: { color: theme.colors.bg, fontWeight: '700', fontSize: 16 },
+  btnText: { color: '#ffffff', fontWeight: '700', fontSize: 16 },
 });
 
 export default function RootLayout() {
@@ -89,8 +89,10 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: theme.colors.bg },
         }}
       >
+        <Stack.Screen name="auth" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="chat" options={{ title: 'Assistente AI', headerShadowVisible: false }} />
         <Stack.Screen name="settings" options={{ title: 'Impostazioni', presentation: 'modal' }} />
         <Stack.Screen name="account/[id]" options={{ title: 'Dettaglio Conto' }} />
         <Stack.Screen name="transaction/[id]" options={{ title: 'Dettaglio Transazione' }} />

@@ -1,16 +1,21 @@
 // mobile/utils/colors.ts
-// Category colors for charts
 export const categoryColors: Record<string, string> = {
-  alimentari: '#3fb950',
-  trasporti: '#58a6ff',
-  abbigliamento: '#d2a8ff',
-  casa: '#f0883e',
-  salute: '#f85149',
-  svago: '#db61a2',
-  tecnologia: '#79c0ff',
-  bancomat: '#8b949e',
-  trasferimento: '#56d364',
-  altro: '#484f58',
+  alimentari: '#51cf66',
+  trasporti: '#339af0',
+  abbigliamento: '#cc5de8',
+  casa: '#ff922b',
+  salute: '#ff6b6b',
+  svago: '#f06595',
+  tecnologia: '#4dabf7',
+  bancomat: '#868e96',
+  trasferimento: '#38d9a9',
+  stipendio: '#69db7c',
+  investimenti: '#ffd43b',
+  istruzione: '#748ffc',
+  viaggi: '#20c997',
+  animali: '#e599f7',
+  regali: '#ffa8a8',
+  altro: '#495057',
 };
 
 export function getCategoryColor(categoryId: string): string {

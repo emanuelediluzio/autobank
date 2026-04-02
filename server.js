@@ -24,6 +24,8 @@ import {
 } from './src/storage.js';
 import { computeMonthlyStats, computeCategoryTotals } from './src/stats.js';
 import { startPolling } from './src/polling.js';
+import { signup, login, requireAuth } from './src/auth.js';
+import { aiChat, aiInsights, aiBatchCategorize } from './src/ai.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -447,6 +449,84 @@ app.post('/api/user/:userId/consents', (req, res) => {
 app.delete('/api/user/:userId/consents/:consentToken', (req, res) => {
   removeUserConsent(req.params.userId, req.params.consentToken);
   res.json({ ok: true });
+});
+
+// --- AUTH ---
+app.post('/api/auth/signup', async (req, res) => {
+  try {
+    const { email, password, name } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'Email e password richiesti' });
+    const result = await signup(email, password, name);
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'Email e password richiesti' });
+    const result = await login(email, password);
+    res.json(result);
+  } catch (e) {
+    res.status(401).json({ error: e.message });
+  }
+});
+
+app.get('/api/auth/me', requireAuth, (req, res) => {
+  res.json({ email: req.userEmail });
+});
+
+// --- AI ---
+app.post('/api/ai/chat', async (req, res) => {
+  try {
+    const { message } = req.body;
+    if (!message) return res.status(400).json({ error: 'Messaggio richiesto' });
+
+    // Raccogli contesto finanziario
+    let context = { transactions: [], balances: {}, accounts: [] };
+    try {
+      const accounts = await getAccounts(auth());
+      context.accounts = accounts;
+      for (const acc of accounts) {
+        const id = acc.id || acc.accountId;
+        const [bal, txRaw] = await Promise.all([
+          getAccountBalances(id, auth()),
+          getAccountTransactions(id, auth()),
+        ]);
+        context.balances[id] = bal;
+        const categorized = categorizeTransactions(txRaw);
+        context.transactions.push(...(categorized.booked || []));
+      }
+    } catch (e) {
+      console.log('[AI Chat] No bank data available:', e.message);
+    }
+
+    const reply = await aiChat(message, context);
+    res.json({ reply });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/ai/insights', async (req, res) => {
+  try {
+    let allTxs = [];
+    try {
+      const accounts = await getAccounts(auth());
+      for (const acc of accounts) {
+        const id = acc.id || acc.accountId;
+        const txRaw = await getAccountTransactions(id, auth());
+        const categorized = categorizeTransactions(txRaw);
+        allTxs.push(...(categorized.booked || []));
+      }
+    } catch {}
+    const insights = await aiInsights(allTxs);
+    res.json(insights);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // Fallback SPA

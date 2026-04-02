@@ -85,3 +85,27 @@ export const addUserConsent = (userId: string, consent: { consentToken: string; 
 
 export const removeUserConsent = (userId: string, consentToken: string) =>
   request<{ ok: boolean }>(`/user/${userId}/consents/${consentToken}`, { method: 'DELETE' });
+
+// Auth
+export const authSignup = (email: string, password: string, name?: string) =>
+  request<{ token: string; user: { email: string; name: string } }>('/auth/signup', {
+    method: 'POST',
+    body: JSON.stringify({ email, password, name }),
+  });
+
+export const authLogin = (email: string, password: string) =>
+  request<{ token: string; user: { email: string; name: string } }>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+
+// AI Chat
+export const aiChat = (message: string) =>
+  request<{ reply: string }>('/ai/chat', {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  });
+
+// AI Insights
+export const aiInsights = () =>
+  request<Array<{ title: string; description: string; type: string; icon: string }>>('/ai/insights');

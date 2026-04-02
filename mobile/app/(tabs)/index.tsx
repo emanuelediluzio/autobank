@@ -1,7 +1,7 @@
 // mobile/app/(tabs)/index.tsx
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, RefreshControl, StyleSheet } from 'react-native';
-import { Redirect } from 'expo-router';
+import { View, Text, ScrollView, RefreshControl, StyleSheet, TouchableOpacity } from 'react-native';
+import { Redirect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useTransactionStore } from '../../store/useTransactionStore';
@@ -14,15 +14,20 @@ import { theme } from '../../theme';
 import { formatAmount } from '../../utils/format';
 
 export default function DashboardScreen() {
-  const { isOnboarded } = useAuthStore();
+  const { isOnboarded, consentToken } = useAuthStore();
   const { accounts, transactions, balances, stats, loading, error, fetchAll } = useTransactionStore();
   const [initialLoad, setInitialLoad] = useState(true);
+  const router = useRouter();
+
+  const hasValidConsent = isOnboarded && consentToken && consentToken !== 'demo-mode';
 
   useEffect(() => {
-    if (isOnboarded) {
+    if (hasValidConsent) {
       fetchAll().finally(() => setInitialLoad(false));
+    } else {
+      setInitialLoad(false);
     }
-  }, [isOnboarded]);
+  }, [hasValidConsent]);
 
   if (!isOnboarded) return <Redirect href="/onboarding" />;
 
@@ -73,6 +78,27 @@ export default function DashboardScreen() {
   // Insight generation
   const topCategory = categoryData.length > 0 ? categoryData[0] : null;
   const spentPct = topCategory && totalSpent > 0 ? Math.round((topCategory.total / totalSpent) * 100) : 0;
+
+  // Se non ha consent valido, mostra interfaccia vuota senza errori API
+  if (!hasValidConsent && !initialLoad) {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Text style={styles.greeting}>Dashboard</Text>
+        <View style={styles.balanceCard}>
+          <Text style={styles.balanceLabel}>SALDO TOTALE</Text>
+          <Text style={styles.balanceValue}>{formatAmount(0, 'EUR')}</Text>
+        </View>
+        <View style={styles.insightCard}>
+          <View style={styles.insightIcon}>
+            <Ionicons name="link" size={18} color={theme.colors.accent} />
+          </View>
+          <Text style={styles.insightText}>
+            Collega un conto bancario per vedere le tue transazioni, spese e statistiche.
+          </Text>
+        </View>
+      </ScrollView>
+    );
+  }
 
   if (initialLoad && loading) {
     return (
@@ -155,6 +181,11 @@ export default function DashboardScreen() {
       {error ? (
         <Text style={styles.errorText}>{error}</Text>
       ) : null}
+
+      {/* AI Chat FAB */}
+      <TouchableOpacity style={styles.fab} onPress={() => router.push('/chat')} activeOpacity={0.8}>
+        <Ionicons name="sparkles" size={22} color="#ffffff" />
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -211,4 +242,20 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 15, fontWeight: '600', color: theme.colors.text, marginBottom: 12 },
   emptyText: { color: theme.colors.textMuted, textAlign: 'center', paddingVertical: 16 },
   errorText: { color: theme.colors.danger, textAlign: 'center', marginTop: 8, fontSize: 13 },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 100,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: theme.colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: theme.colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
 });
