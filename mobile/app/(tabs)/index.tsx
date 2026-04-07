@@ -14,7 +14,7 @@ import { theme } from '../../theme';
 import { formatAmount } from '../../utils/format';
 
 export default function DashboardScreen() {
-  const { isOnboarded, consentToken } = useAuthStore();
+  const { isOnboarded, isLoggedIn, consentToken } = useAuthStore();
   const { accounts, transactions, balances, stats, loading, error, fetchAll } = useTransactionStore();
   const [initialLoad, setInitialLoad] = useState(true);
   const router = useRouter();
@@ -29,6 +29,9 @@ export default function DashboardScreen() {
     }
   }, [hasValidConsent]);
 
+  // Utente non loggato e non onboarded → schermata auth
+  if (!isLoggedIn && !isOnboarded) return <Redirect href="/auth" />;
+  // Loggato ma non ha collegato banca → onboarding
   if (!isOnboarded) return <Redirect href="/onboarding" />;
 
   // Aggregate across all accounts

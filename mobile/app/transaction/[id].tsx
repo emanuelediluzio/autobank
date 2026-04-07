@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 10,
   },
-  saveNoteBtnText: { color: theme.colors.bg, fontWeight: '600', fontSize: 14 },
+  saveNoteBtnText: { color: '#ffffff', fontWeight: '600', fontSize: 14 },
   shareBtn: {
     backgroundColor: theme.colors.surface,
     paddingVertical: 16,

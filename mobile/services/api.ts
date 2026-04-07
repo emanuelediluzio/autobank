@@ -4,14 +4,20 @@
 // In dev: use local IP. In prod: use Railway URL.
 // Set this via app.json extra or env.
 // Expo injects EXPO_PUBLIC_ vars at build time
+import * as SecureStore from 'expo-secure-store';
+
 const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? 'https://autobank-74kt.onrender.com/api';
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE}${path}`;
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-    ...options,
-  });
+  const token = await SecureStore.getItemAsync('authToken');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(url, { headers, ...options });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   return data as T;

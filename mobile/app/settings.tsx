@@ -232,5 +232,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 24,
   },
-  saveBtnText: { color: theme.colors.bg, fontWeight: '700', fontSize: 16 },
+  saveBtnText: { color: '#ffffff', fontWeight: '700', fontSize: 16 },
 });
