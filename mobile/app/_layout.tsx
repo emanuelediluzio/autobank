@@ -47,6 +47,7 @@ const lockStyles = StyleSheet.create({
 export default function RootLayout() {
   const loadFromStorage = useAuthStore(s => s.loadFromStorage);
   const isOnboarded = useAuthStore(s => s.isOnboarded);
+  const isLoggedIn = useAuthStore(s => s.isLoggedIn);
   const { isEnabled, isAuthenticated, isChecking, authenticate, biometricLabel } = useBiometrics();
   const [authLoaded, setAuthLoaded] = useState(false);
 

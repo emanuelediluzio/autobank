@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   countryActiveText: { color: theme.colors.accent },
   btn: { marginTop: 24, backgroundColor: theme.colors.accent, paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
   btnDisabled: { opacity: 0.5 },
-  btnText: { color: theme.colors.bg, fontWeight: '700', fontSize: 16 },
+  btnText: { color: '#ffffff', fontWeight: '700', fontSize: 16 },
   error: { color: theme.colors.danger, marginTop: 12, textAlign: 'center' },
   skipBtn: {
     marginTop: 16,

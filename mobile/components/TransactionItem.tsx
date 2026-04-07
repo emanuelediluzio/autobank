@@ -17,7 +17,7 @@ export function TransactionItem({ description, amount, currency = 'EUR', date, c
 
   return (
     <View style={styles.row}>
-      <View style={[styles.iconCircle, { backgroundColor: isExpense ? 'rgba(255, 59, 48, 0.1)' : 'rgba(0, 214, 50, 0.1)' }]}>
+      <View style={[styles.iconCircle, { backgroundColor: isExpense ? theme.colors.dangerGlow : theme.colors.successGlow }]}>
         <Text style={styles.icon}>{categoryIcon || '\uD83D\uDCE6'}</Text>
       </View>
       <View style={styles.info}>
@@ -25,7 +25,7 @@ export function TransactionItem({ description, amount, currency = 'EUR', date, c
         <Text style={styles.meta}>{categoryLabel || 'Altro'} · {formatDate(date)}</Text>
       </View>
       <View style={styles.amountWrap}>
-        <Text style={[styles.amount, { color: isExpense ? theme.colors.danger : theme.colors.accent }]}>
+        <Text style={[styles.amount, { color: isExpense ? theme.colors.danger : theme.colors.success }]}>
           {formatAmount(amount, currency)}
         </Text>
       </View>

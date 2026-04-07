@@ -8,7 +8,7 @@ import { theme } from '../../theme';
 import { formatAmount } from '../../utils/format';
 
 export default function ProfileScreen() {
-  const { userId, logout } = useAuthStore();
+  const { userId, email, name, isLoggedIn, logout } = useAuthStore();
   const { accounts, balances, transactions, stats } = useTransactionStore();
   const router = useRouter();
 
@@ -45,8 +45,9 @@ export default function ProfileScreen() {
   const allCategories = Object.values(stats).flatMap(s => s?.categories || []);
   const uniqueCategories = new Set(allCategories.map(c => c.id));
 
-  // Initials
-  const initials = (userId || 'U').substring(0, 2).toUpperCase();
+  // Initials from name or email
+  const displayName = name || email || userId || 'Utente';
+  const initials = displayName.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || 'U';
 
   const menuItems = [
     { icon: 'settings-outline' as const, label: 'Impostazioni', onPress: () => router.push('/settings') },
@@ -63,8 +64,8 @@ export default function ProfileScreen() {
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
-          <Text style={styles.name}>Il mio profilo</Text>
-          <Text style={styles.userId}>{userId}</Text>
+          <Text style={styles.name}>{name || 'Il mio profilo'}</Text>
+          <Text style={styles.userId}>{email || userId || 'Non autenticato'}</Text>
         </View>
 
         {/* Balance card */}
@@ -109,11 +110,18 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        {/* Logout */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.6}>
-          <Ionicons name="log-out-outline" size={20} color={theme.colors.danger} />
-          <Text style={styles.logoutText}>Esci</Text>
-        </TouchableOpacity>
+        {/* Auth */}
+        {!isLoggedIn ? (
+          <TouchableOpacity style={styles.loginBtn} onPress={() => router.push('/auth')} activeOpacity={0.6}>
+            <Ionicons name="log-in-outline" size={20} color={theme.colors.accent} />
+            <Text style={styles.loginText}>Accedi o Registrati</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.6}>
+            <Ionicons name="log-out-outline" size={20} color={theme.colors.danger} />
+            <Text style={styles.logoutText}>Esci</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Version */}
         <Text style={styles.version}>Autobank v1.0.0</Text>
@@ -204,10 +212,22 @@ const styles = StyleSheet.create({
     gap: 8,
     width: '100%',
     padding: 16,
-    backgroundColor: 'rgba(255, 59, 48, 0.08)',
+    backgroundColor: theme.colors.dangerGlow,
     borderRadius: 16,
     marginTop: 8,
   },
+  loginBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    width: '100%',
+    padding: 16,
+    backgroundColor: theme.colors.accentGlow,
+    borderRadius: 16,
+    marginTop: 8,
+  },
+  loginText: { color: theme.colors.accent, fontWeight: '600', fontSize: 15 },
   logoutText: { color: theme.colors.danger, fontWeight: '600', fontSize: 15 },
   version: {
     color: theme.colors.textMuted,

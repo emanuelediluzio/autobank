@@ -13,12 +13,12 @@ interface Props {
 }
 
 export function SummaryCard({ label, value, currency = 'EUR', type = 'neutral', icon }: Props) {
-  const color = type === 'positive' ? theme.colors.accent
+  const color = type === 'positive' ? theme.colors.success
     : type === 'negative' ? theme.colors.danger
     : theme.colors.text;
 
-  const bgTint = type === 'positive' ? 'rgba(0, 214, 50, 0.06)'
-    : type === 'negative' ? 'rgba(255, 59, 48, 0.06)'
+  const bgTint = type === 'positive' ? theme.colors.successGlow
+    : type === 'negative' ? theme.colors.dangerGlow
     : 'transparent';
 
   const iconName = icon
